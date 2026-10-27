@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>স্যার — পরিচিতি সার্ভে</title>
+<style>
+:root{
+  --bg:#0f1319; --card:#161d26; --panel:#1c2531; --line:#2a3646;
+  --text:#e8eef6; --muted:#9fb0c4; --accent:#4fd1a1; --accent2:#7aa2ff;
+}
+@media (prefers-color-scheme:light){
+  :root{ --bg:#f4f7fb; --card:#ffffff; --panel:#eef3f9; --line:#d7e0ec;
+         --text:#10202e; --muted:#5b6b7d; --accent:#0f9d6e; --accent2:#3563e9; }
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Noto Sans Bengali',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  background:var(--bg);color:var(--text);line-height:1.6;-webkit-text-size-adjust:100%}
+.wrap{max-width:46rem;margin:0 auto;padding:24px 18px 96px}
+header h1{font-size:1.7rem;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 18px}
+.bar{position:sticky;top:0;z-index:9;background:var(--bg);padding:10px 0 12px;
+  border-bottom:1px solid var(--line);margin-bottom:18px}
+.track{height:10px;border-radius:99px;background:var(--panel);overflow:hidden;border:1px solid var(--line)}
+.fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+.count{font-size:.85rem;color:var(--muted);margin-top:6px;text-align:right}
+.q{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:16px 16px 14px;margin:0 0 14px;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.q .num{display:inline-block;min-width:26px;height:26px;line-height:26px;text-align:center;
+  border-radius:8px;background:var(--panel);color:var(--accent);font-weight:700;font-size:.85rem;margin-right:8px}
+.q label.t{font-weight:600;font-size:1.05rem}
+.hint{color:var(--muted);font-size:.85rem;margin:6px 0 0 34px}
+input[type=text],input[type=number],textarea,select{
+  width:100%;margin-top:10px;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);font:inherit}
+textarea{min-height:70px;resize:vertical}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.opts label{display:inline-flex;align-items:center;gap:6px;padding:8px 12px;border-radius:99px;
+  border:1px solid var(--line);background:var(--panel);cursor:pointer;font-size:.92rem}
+.opts input{accent-color:var(--accent)}
+.actions{position:fixed;left:0;right:0;bottom:0;background:var(--card);
+  border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:10px;justify-content:center}
+.wrap2{max-width:46rem;margin:0 auto;display:flex;gap:10px;width:100%}
+button{font:inherit;font-weight:600;border-radius:10px;padding:12px 18px;border:1px solid var(--line);
+  background:var(--panel);color:var(--text);cursor:pointer}
+button.primary{background:linear-gradient(90deg,var(--accent),var(--accent2));color:#04150f;border:0;flex:1}
+button.ghost{flex:0 0 auto}
+.toast{position:fixed;bottom:78px;left:50%;transform:translateX(-50%);background:var(--accent);
+  color:#04150f;padding:10px 16px;border-radius:10px;font-weight:600;opacity:0;pointer-events:none;
+  transition:opacity .3s;z-index:20}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🙋 স্যার, আপনার পরিচিতি সার্ভে</h1>
+    <p class="lead">২০টি ছোট প্রশ্ন। উত্তর দিয়ে নিচের <b>“উত্তর কপি করুন”</b> চাপুন, তারপর চ্যাটে পেস্ট করে পাঠান। কিছুই কোথাও সেভ হয় না — পুরোপুরি আপনার ফোনেই থাকে।</p>
+  </header>
+  <div class="bar">
+    <div class="track"><div class="fill" id="fill"></div></div>
+    <div class="count" id="count">০ / ২০ উত্তর দেওয়া হয়েছে</div>
+  </div>
+  <form id="form"></form>
+</div>
+<div class="actions"><div class="wrap2">
+  <button type="button" class="ghost" id="reset">রিসেট</button>
+  <button type="button" class="primary" id="copy">📋 উত্তর কপি করুন</button>
+</div></div>
+<div class="toast" id="toast">কপি হয়েছে ✅</div>
+
+<script>
+const QUESTIONS = [
+  {id:"name", t:"আপনার নাম কী?", type:"text", ph:"যেমন: রাশেল মাহমুদ"},
+  {id:"age", t:"আপনার বয়স কত?", type:"text", ph:"যেমন: ২৮"},
+  {id:"place", t:"আপনি কোথায় থাকেন?", type:"text", ph:"শহর / দেশ"},
+  {id:"job", t:"আপনার পেশা বা কাজ কী?", type:"text", ph:"যেমন: শিক্ষক, ফ্রিল্যান্সার"},
+  {id:"edu", t:"আপনার শিক্ষাগত যোগ্যতা?", type:"text", ph:"যেমন: অনার্স, মাস্টার্স"},
+  {id:"langs", t:"কোন কোন প্রোগ্রামিং ভাষা / টেকনোলজি জানেন?", type:"text", ph:"যেমন: HTML, JS, Python"},
+  {id:"exp", t:"কত দিন ধরে কোডিং বা টেকনোলজি নিয়ে কাজ করছেন?", type:"text", ph:"যেমন: ২ বছর"},
+  {id:"hours", t:"দিনে গড়ে কত সময় কম্পিউটারে কাজ করেন?", type:"opts", o:["১–২ ঘণ্টা","৩–৪ ঘণ্টা","৫–৭ ঘণ্টা","৮+ ঘণ্টা"]},
+  {id:"tools", t:"আপনার প্রিয় টুল বা সফটওয়্যার কোনটি?", type:"text", ph:"যেমন: VS Code, ChatGPT"},
+  {id:"selfcode", t:"আপনি নিজে কোড লেখেন, নাকি অন্যকে দিয়ে করান?", type:"opts", o:["নিজে লিখি","অন্যকে দিয়ে করাই","দুটোই","এখনো শিখছি"]},
+  {id:"sonali", t:"আপনার প্রকল্প “সোনালী” আসলে কী?", type:"text", ph:"সংক্ষেপে"},
+  {id:"sites", t:"আপনার বানানো সাইট / অ্যাপের নামগুলো কী কী?", type:"text", ph:"যেমন: hisabcalc, admissionsky"},
+  {id:"favsite", t:"কোন সাইটটি আপনার সবচেয়ে প্রিয়?", type:"text", ph:""},
+  {id:"goal", t:"এই সাইটগুলো দিয়ে আপনার মূল লক্ষ্য কী?", type:"opts", o:["আয় করা","মানুষকে সাহায্য","শেখা/অভিজ্ঞতা","সবগুলো"]},
+  {id:"oneyear", t:"আগামী ১ বছরে কী অর্জন করতে চান?", type:"text", ph:""},
+  {id:"dream", t:"আপনার বড় স্বপ্ন কী?", type:"text", ph:""},
+  {id:"aihelp", t:"AI আপনার কাজে কীভাবে সাহায্য করবে বলে চান?", type:"text", ph:""},
+  {id:"hobby", t:"আপনার শখ বা আগ্রহ কী?", type:"text", ph:""},
+  {id:"time", t:"কখন আপনি সবচেয়ে ভালো কাজ করেন?", type:"opts", o:["সকাল","দুপুর","সন্ধ্যা","রাত"]},
+  {id:"expect", t:"এই বট (AI সহকারী) থেকে আপনার প্রত্যাশা কী?", type:"text", ph:"যেমন: দ্রুত কাজ, ভালো সাজেশন"}
+];
+const form = document.getElementById("form");
+const fill = document.getElementById("fill");
+const count = document.getElementById("count");
+const BN = n => String(n).replace(/[0-9]/g, d => "০১২৩৪৫৬৭৮৯"[d]);
+
+QUESTIONS.forEach((q, i) => {
+  const box = document.createElement("div");
+  box.className = "q";
+  let html = `<span class="num">${BN(i+1)}</span><label class="t" for="${q.id}">${q.t}</label>`;
+  if (q.type === "opts") {
+    html += `<div class="opts">` + q.o.map((o,j) =>
+      `<label><input type="radio" name="${q.id}" value="${o}"> ${o}</label>`).join("") + `</div>`;
+  } else if (q.t.length > 42) {
+    html += `<textarea id="${q.id}" data-q="${i}" placeholder="${q.ph||''}"></textarea>`;
+  } else {
+    html += `<input type="text" id="${q.id}" data-q="${i}" placeholder="${q.ph||''}">`;
+  }
+  box.innerHTML = html;
+  form.appendChild(box);
+});
+
+function progress(){
+  let done = 0;
+  QUESTIONS.forEach(q => {
+    if (q.type === "opts") {
+      if (document.querySelector(`input[name="${q.id}"]:checked`)) done++;
+    } else {
+      const el = document.getElementById(q.id);
+      if (el && el.value.trim()) done++;
+    }
+  });
+  const pct = Math.round(done / QUESTIONS.length * 100);
+  fill.style.width = pct + "%";
+  count.textContent = `${BN(done)} / ${BN(QUESTIONS.length)} উত্তর দেওয়া হয়েছে`;
+}
+form.addEventListener("input", progress);
+form.addEventListener("change", progress);
+progress();
+
+document.getElementById("copy").addEventListener("click", () => {
+  let out = "📋 স্যারের পরিচিতি সার্ভে — উত্তর\n\n";
+  QUESTIONS.forEach((q, i) => {
+    let ans = "";
+    if (q.type === "opts") {
+      const sel = document.querySelector(`input[name="${q.id}"]:checked`);
+      ans = sel ? sel.value : "";
+    } else {
+      const el = document.getElementById(q.id);
+      ans = el ? el.value.trim() : "";
+    }
+    out += `${i+1}. ${q.t}\n→ ${ans || "(খালি)"}\n\n`;
+  });
+  const done = (out.match(/→ (?!\(খালি\))/g) || []).length;
+  out += `— মোট ${done}/${QUESTIONS.length} উত্তর দেওয়া হয়েছে।`;
+  const ta = document.createElement("textarea");
+  ta.value = out; document.body.appendChild(ta); ta.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch(e){}
+  document.body.removeChild(ta);
+  if (!ok && navigator.clipboard) { navigator.clipboard.writeText(out).catch(()=>{}); }
+  const t = document.getElementById("toast");
+  t.classList.add("show"); setTimeout(()=>t.classList.remove("show"), 1800);
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("সব উত্তর মুছে ফেলবেন?")) return;
+  form.reset(); progress();
+});
+</script>
+</body>
+</html>
